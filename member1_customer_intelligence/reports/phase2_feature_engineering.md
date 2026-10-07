@@ -110,6 +110,7 @@ In accordance with our strict leakage review, $6$ original features were quarant
 - **Business Meaning:** Captures potential differences in churn behavior across combinations of geographic region and product category. This represents association only and does not establish causality.
 - **Leakage Status:** No direct target leakage detected; feature uses non-target variables available in the assumed prediction setting.
 
+### 3.5 Evaluation of `high_risk_subcategory_flag`
 The prompt specifically required:
 > *"DO NOT define this using Churn. First determine a business-safe rule using only available non-target information. If a defensible rule cannot be established, leave this feature out and document why."*
 
