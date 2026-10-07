@@ -1,23 +1,40 @@
 """
 URL configuration for core_platform project.
-
-The `urlpatterns` list routes URLs to views. For more information please see:
-    https://docs.djangoproject.com/en/6.1/topics/http/urls/
-Examples:
-Function views
-    1. Add an import:  from my_app import views
-    2. Add a URL to urlpatterns:  path('', views.home, name='home')
-Class-based views
-    1. Add an import:  from other_app.views import Home
-    2. Add a URL to urlpatterns:  path('', Home.as_view(), name='home')
-Including another URLconf
-    1. Import the include() function: from django.urls import include, path
-    2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
 from django.contrib import admin
 from django.urls import path, include
+from rest_framework.views import APIView
+from rest_framework.response import Response
+
+
+class APIRootView(APIView):
+    """
+    GET /
+    Platform API index — lists all available services and endpoints.
+    """
+    def get(self, request):
+        base = request.build_absolute_uri('/').rstrip('/')
+        return Response({
+            "platform": "Enterprise AI Decision Intelligence Platform",
+            "version": "v1",
+            "services": {
+                "customer_intelligence": {
+                    "base_url": f"{base}/api/v1/customer-intelligence/",
+                    "endpoints": {
+                        "health": f"{base}/api/v1/customer-intelligence/health/",
+                        "predict": f"{base}/api/v1/customer-intelligence/predict/",
+                        "batch_predict": f"{base}/api/v1/customer-intelligence/batch-predict/",
+                        "history": f"{base}/api/v1/customer-intelligence/history/",
+                        "analytics": f"{base}/api/v1/customer-intelligence/analytics/",
+                    }
+                }
+            },
+            "admin": f"{base}/admin/",
+        })
+
 
 urlpatterns = [
+    path('', APIRootView.as_view(), name='api_root'),
     path('admin/', admin.site.urls),
     path('api/v1/customer-intelligence/', include('apps.customer_intelligence.urls')),
 ]
