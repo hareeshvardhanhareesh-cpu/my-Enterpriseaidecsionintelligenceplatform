@@ -110,6 +110,7 @@ In accordance with our strict leakage review, $6$ original features were quarant
 - **Business Meaning:** Captures potential differences in churn behavior across combinations of geographic region and product category. This represents association only and does not establish causality.
 - **Leakage Status:** No direct target leakage detected; feature uses non-target variables available in the assumed prediction setting.
 
+### 3.5 Evaluation of `high_risk_subcategory_flag`
 The prompt specifically required:
 > *"DO NOT define this using Churn. First determine a business-safe rule using only available non-target information. If a defensible rule cannot be established, leave this feature out and document why."*
 
@@ -138,7 +139,7 @@ $$\begin{aligned}
 0.0 & \text{if } Quantity \le 0 \text{ or } Quantity \text{ is NaN} 
 \end{cases} \\[8pt]
 \mathbf{discount\_tier} &= \begin{cases} 
-\text{"None"} & \text{if } Discount = 0.00 \\ 
+\text{"Zero"} & \text{if } Discount = 0.00 \\ 
 \text{"Low"} & \text{if } 0.00 < Discount \le 0.20 \\ 
 \text{"Moderate"} & \text{if } 0.20 < Discount \le 0.40 \\ 
 \text{"High"} & \text{if } Discount > 0.40 
@@ -166,7 +167,7 @@ The processed dataset contains $14$ input features and $1$ binary target:
 | 10 | `Sales Category` | String / Object | Categorical | `Low`, `Medium`, `High`, `Very High` |
 | 11 | `log_sales` | Float64 | Numerical (Engineered) | $0.3674$ to $10.0275$ |
 | 12 | `sales_per_quantity` | Float64 | Numerical (Engineered) | $\$0.3360$ to $\$3,773.08$ |
-| 13 | `discount_tier` | String / Object | Categorical (Engineered) | `None`, `Low`, `Moderate`, `High` |
+| 13 | `discount_tier` | String / Object | Categorical (Engineered) | `Zero`, `Low`, `Moderate`, `High` |
 | 14 | `region_category_interaction` | String / Object | Categorical (Engineered) | 12 composite pairs (`Central_Furniture`, etc.) |
 | **T** | **`Churn`** | **Int64** | **Target Label** | **$0$ (Retained: $8,838$), $1$ (Churned: $1,139$)** |
 
@@ -267,9 +268,9 @@ Numerical Features  ───>  ColumnTransformer  ───>  RobustScaler() / 
 
    [ENGINEERED OPERATIONAL FEATURES]
   11. log_sales                           (ln(1 + Sales): skew-normalized monetary size)
-  12. sales_per_quantity                  (Sales / Quantity: effective unit price paid)
-  13. discount_tier                       (Commercial markdown bracket: None, Low, Moderate, High)
-  14. region_category_interaction         (Composite risk: Region + "_" + Category)
+  12. sales_per_quantity                  (Sales / Quantity: average sales value per purchased unit)
+  13. discount_tier                       (Fixed thresholds: Zero, Low, Moderate, High)
+  14. region_category_interaction         (Composite interaction: Region + "_" + Category)
 
 ═══════════════════════════════════════════════════════════════════════════════════════
    TARGET VARIABLE:

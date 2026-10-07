@@ -47,23 +47,24 @@ We evaluate five primary candidate engineered features designed to extract behav
 - **Formulation:**
   $$\text{sales\_per\_quantity} = \frac{\text{Sales}}{\text{Quantity}}$$
 - **Source Features:** `Sales` (Float64), `Quantity` (Int64)
-- **Business Rationale:** Raw sales does not distinguish between a customer buying $10$ low-cost binders ($\$20$ total) versus $1$ high-end executive desk chair ($\$200$ total). `sales_per_quantity` acts as the effective realization price per item. Churned accounts have a significantly lower median unit price ($\$16.27$) compared to premium retained buyers ($\$30.00$), revealing that defecting buyers are purchasing cheaper commodity items.
-- **Leakage Risk:** **Zero.** Both numerator and denominator are established at order booking.
+- **Business Meaning:** Average sales value per purchased unit, calculated as Sales / Quantity.
+- **Leakage Status:** No direct target leakage detected; feature uses non-target variables available in the assumed prediction setting.
 - **Production Eligibility:** **Eligible (Mandatory Core Feature).**
 
 ---
 
 ### 1.3 `discount_tier` (Binned Commercial Promotion Bracket)
 - **Formulation:**
+  Fixed business-rule thresholds of 0%, 0–20%, 20–40%, and >40%, defined independently of the target variable:
   $$\text{discount\_tier} = \begin{cases} 
   \text{'None'} & \text{if } \text{Discount} = 0.00 \\ 
-  \text{'Standard'} & \text{if } 0.00 < \text{Discount} \le 0.20 \\ 
-  \text{'Moderate'} & \text{if } 0.20 < \text{Discount} \le 0.30 \\ 
-  \text{'Deep'} & \text{if } \text{Discount} > 0.30 
+  \text{'Low'} & \text{if } 0.00 < \text{Discount} \le 0.20 \\ 
+  \text{'Moderate'} & \text{if } 0.20 < \text{Discount} \le 0.40 \\ 
+  \text{'High'} & \text{if } \text{Discount} > 0.40 
   \end{cases}$$
 - **Source Feature:** `Discount` (Float64)
-- **Business & Governance Rationale:** As proven in the audit report, the synthetic churn label used a threshold split around $Discount > 0.30$. If raw continuous `Discount` is provided directly to tree ensembles, greedy splits (e.g., $Discount \ge 0.31$) simply memorize the synthetic dataset artifact. By mapping discount rates into standard commercial retail markdown tiers, we preserve the operational behavioral signal (customers receiving deep clearance discounts are mercenary buyers with low retention) while preventing brittle threshold exploitation.
-- **Leakage Risk:** **Low / Controlled.**
+- **Business Meaning:** Fixed business-rule thresholds of 0%, 0–20%, 20–40%, and >40%, defined independently of the target variable.
+- **Leakage Status:** No direct target leakage detected; feature uses non-target variables available in the assumed prediction setting.
 - **Production Eligibility:** **Eligible (Recommended Categorical Feature).**
 
 ---
@@ -73,12 +74,8 @@ We evaluate five primary candidate engineered features designed to extract behav
   $$\text{region\_category\_interaction} = \text{Region} \parallel \text{"\_"} \parallel \text{Category}$$
   *(e.g., `'Central_Furniture'`, `'East_Technology'`, `'West_Office Supplies'`)*
 - **Source Features:** `Region` (Object), `Category` (Object)
-- **Business Rationale:** Regional supply chain costs and regional competitive pressures create localized churn vulnerabilities. As revealed in Phase 1 EDA:
-  - `Central_Furniture` experiences a **$38.13\%$ churn rate** ($183 / 480$).
-  - `Central_Office Supplies` experiences a **$21.07\%$ churn rate** ($299 / 1,419$).
-  - `West_Technology` experiences only a **$1.34\%$ churn rate** ($8 / 599$).
-  Creating explicit interaction terms enables linear classifiers (Logistic Regression) and shallow trees to immediately capture regional product dynamics without requiring deep combinatorial tree splits.
-- **Leakage Risk:** **Zero.** Both region and category are known prior to purchase.
+- **Business Meaning:** Captures potential differences in churn behavior across combinations of geographic region and product category. This represents association only and does not establish causality.
+- **Leakage Status:** No direct target leakage detected; feature uses non-target variables available in the assumed prediction setting.
 - **Production Eligibility:** **Eligible (High-Value Interaction Feature).**
 
 ---
@@ -229,34 +226,37 @@ Based on our rigorous leakage audit, empirical rule analysis, and operational bu
 ═══════════════════════════════════════════════════════════════════════════════════════
 
 1. RAW OPERATIONAL NUMERICAL FEATURES:
-   • Quantity                          (Unit basket volume)
-   • Discount                          (Contractual promotional rate)
+   • Sales                             (Gross invoice monetary volume)
+   • Quantity                          (Unit basket volume: 1 to 14)
+   • Discount                          (Contractual promotional rate: 0.0 to 0.80)
 
 2. ENGINEERED NUMERICAL FEATURES:
    • log_sales                         (ln(1 + Sales): skew-normalized monetary size)
-   • sales_per_quantity                (Sales / Quantity: effective unit price paid)
+   • sales_per_quantity                (Sales / Quantity: average sales value per purchased unit)
 
 3. RAW OPERATIONAL CATEGORICAL FEATURES:
    • Ship Mode                         (Logistical speed preference: 4 levels)
    • Segment                           (Customer profile tier: 3 levels)
    • Region                            (Macro-geography: 4 levels)
-   • State                             (Jurisdictional pricing geography: 49 levels)
+   • State                             (Jurisdictional geography: 49 levels)
    • Category                          (Broad merchandise department: 3 levels)
    • Sub-Category                      (Granular product line: 17 levels)
+   • Sales Category                    (Invoice magnitude bracket: 4 levels)
 
 4. ENGINEERED CATEGORICAL FEATURES:
-   • discount_tier                     (Commercial markdown tier: None, Standard, Moderate, Deep)
-   • region_category_interaction       (Composite risk term: Region + "_" + Category)
+   • discount_tier                     (Fixed thresholds: None, Low, Moderate, High)
+   • region_category_interaction       (Composite interaction: Region + "_" + Category)
 
 ═══════════════════════════════════════════════════════════════════════════════════════
-TOTAL FEATURE COUNT: 12 Input Features (4 Numerical, 8 Categorical)
-EXCLUDED FINANCIAL VARIABLES: Profit, Profit Margin, Profit Status (100% Quarantined)
-EXCLUDED ARTIFACTS / KEYS: Customer ID, Country, City, Inventory Risk, Sales Category
+TOTAL FEATURE COUNT: 14 Input Features (5 Numerical, 9 Categorical/String)
+EXCLUDED FINANCIAL VARIABLES: Profit, Profit Margin, Profit Status (Quarantined)
+EXCLUDED ARTIFACTS / KEYS: Customer ID, Country, City, Inventory Risk
+TARGET VARIABLE: Churn (Binary: 0 = Retained, 1 = Churned)
 ═══════════════════════════════════════════════════════════════════════════════════════
 ```
 
 ### Business and Architectural Justification:
-1. **$100\%$ Pre-Decision Availability:** Every single feature in this set is known at cart checkout or ERP order ingestion, allowing the automated system to trigger instant retention workflows before the customer defects.
-2. **Zero Target Contamination:** Completely immune to the synthetic $Profit < 0$ rule artifact that ruins the offline model's real-world transferability.
-3. **Comprehensive Domain Coverage:** Captures the full spectrum of customer behavior: logistical urgency (`Ship Mode`), customer tier (`Segment`), regional economics (`Region`, `State`), product line risk (`Category`, `Sub-Category`), order magnitude (`log_sales`), product quality proxy (`sales_per_quantity`), and promotional sensitivity (`Discount`, `discount_tier`).
-4. **FastAPI & Data Contract Compatibility:** Clean, low-cardinality, deterministic schema that maps cleanly to standard Pydantic models for real-time inference serving.
+1. **Pre-Decision Availability:** Features in this set are available at cart checkout or order ingestion, allowing automated systems to evaluate attrition risk prior to customer defection.
+2. **No Direct Target Leakage Detected:** Feature pipeline avoids the post-hoc accounting variables and synthetic $Profit < 0$ artifacts that distort offline metrics.
+3. **Operational Representation:** Captures customer logistical choice (`Ship Mode`), customer tier (`Segment`), regional distribution (`Region`, `State`), product line (`Category`, `Sub-Category`), order magnitude (`Sales`, `log_sales`, `Sales Category`), unit transaction value (`sales_per_quantity`), and promotional sensitivity (`Discount`, `discount_tier`).
+4. **FastAPI & Data Contract Compatibility:** Deterministic schema that maps directly to Pydantic validation schemas for real-time inference serving.

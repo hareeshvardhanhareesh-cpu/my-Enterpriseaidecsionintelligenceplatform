@@ -66,7 +66,7 @@ TARGET_COLUMN = "Churn"
 
 # Standard retail markdown tier thresholds (Domain-driven; ZERO Churn dependency)
 DISCOUNT_BINS = [-float("inf"), 0.0, 0.20, 0.40, float("inf")]
-DISCOUNT_LABELS = ["None", "Low", "Moderate", "High"]
+DISCOUNT_LABELS = ["Zero", "Low", "Moderate", "High"]
 
 
 # -------------------------------------------------------------------------
@@ -155,7 +155,7 @@ def create_discount_tier(discount: pd.Series) -> pd.Series:
     
     Fixed business-rule thresholds of 0%, 0–20%, 20–40%, and >40%, defined independently of the target variable.
     Tiers:
-        - 'None'     : Discount == 0.00
+        - 'Zero'     : Discount == 0.00
         - 'Low'      : 0.00 < Discount <= 0.20
         - 'Moderate' : 0.20 < Discount <= 0.40
         - 'High'     : Discount > 0.40

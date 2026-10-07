@@ -42,3 +42,7 @@ ENV/
 # OS artifacts
 .DS_Store
 Thumbs.db
+
+# Databases
+*.sqlite3
+db.sqlite3
